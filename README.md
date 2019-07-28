@@ -1,4 +1,6 @@
 # arlo-mqtt
+[![Build Status](https://travis-ci.org/jasonxh/arlo-mqtt.svg?branch=master)](https://travis-ci.org/jasonxh/arlo-mqtt)
+
 A simple bridge between Arlo and MQTT.
 Based on the Arlo python module from [jeffreydwalter/arlo](https://github.com/jeffreydwalter/arlo).
 
