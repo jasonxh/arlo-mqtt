@@ -1,0 +1,13 @@
+ARG ARCH
+FROM $ARCH/python:3.7-alpine
+
+ARG QEMU_ARCH
+COPY qemu-$QEMU_ARCH-static /usr/bin
+
+LABEL maintainer="jasonxh@gmail.com"
+
+WORKDIR /arlo-mqtt
+COPY . .
+RUN pip install -r requirements.txt
+
+ENTRYPOINT [ "/arlo-mqtt/arlo-mqtt.py" ]
