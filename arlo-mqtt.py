@@ -142,6 +142,12 @@ class ArloMqtt:
         }
         states['activeModes'] = ','.join(self.arlo.GetModesV2()[0]['activeModes']) 
 
+        cams = self.arlo.GetDevices('camera')
+        for cam in cams:
+            device_id = cam['deviceId']
+            if device_id in states:
+                states[device_id]['lastImageUrl'] = cam['presignedLastImageUrl']
+
         self.publish(self.topic_root, states)
 
     def publish(self, topic, value):
