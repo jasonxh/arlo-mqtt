@@ -9,10 +9,14 @@ from homie.node.property.property_string import Property_String
 
 class HomieArloCamera(Device_Base):
     def __init__(self, id, name, mqtt_settings, arlo, base_station, log):
-        super().__init__(device_id=id, name=name, mqtt_settings=mqtt_settings)
+        super().__init__(device_id=id.lower(), name=name, mqtt_settings=mqtt_settings)
 
-        self.add_node(HomieArloCamera._Node(
-            device=self, arlo=arlo, base_station=base_station, log=log))
+        self.arlo_device_id = id
+        self.arlo = arlo
+        self.base_station = base_station
+        self.log = log
+
+        self.add_node(HomieArloCamera._Node(device=self, log=log))
 
         self.start()
 
@@ -21,11 +25,9 @@ class HomieArloCamera(Device_Base):
         return self.get_node('camera')
 
     class _Node(Node_Base):
-        def __init__(self, device, arlo, base_station, log):
+        def __init__(self, device, log):
             super().__init__(device=device, id='camera', name='Camera', type_='camera')
 
-            self.arlo = arlo
-            self.base_station = base_station
             self.log = log
 
             self.add_property(
@@ -41,13 +43,13 @@ class HomieArloCamera(Device_Base):
             self.add_property(
                 Property_String(node=self, id='last-image', name='Last Image'))
 
-        def _set_switch(self, value):
-            privacy = not value
+        def _set_switch(self, on):
+            privacy = not on
             self.log.info('Toggling Arlo camera %s privacy %s',
                           self.name, privacy)
 
-            resp = self.arlo.ToggleCamera(
-                self.base_station, {'deviceId': self.device.device_id}, privacy)
+            resp = self.device.arlo.ToggleCamera(
+                self.device.base_station, {'deviceId': self.device.arlo_device_id}, privacy)
 
             self.privacy_active = resp['properties']['privacyActive']
 
@@ -56,11 +58,11 @@ class HomieArloCamera(Device_Base):
             return not _parse_bool(self.get_property('switch').value)
 
         @privacy_active.setter
-        def privacy_active(self, value):
-            value = not value
+        def privacy_active(self, privacy):
+            on = not privacy
             self.log.debug('[%s] Updating switch to %s',
-                           self.device.name, value)
-            self.get_property('switch').value = str(value).lower()
+                           self.device.name, on)
+            self.get_property('switch').value = str(on).lower()
 
         @property
         def battery_level(self):
@@ -115,10 +117,14 @@ class HomieArloCamera(Device_Base):
 
 class HomieArloBaseStation(Device_Base):
     def __init__(self, id, name, mqtt_settings, arlo, base_station, log):
-        super().__init__(device_id=id, name=name, mqtt_settings=mqtt_settings)
+        super().__init__(device_id=id.lower(), name=name, mqtt_settings=mqtt_settings)
 
-        self.add_node(HomieArloBaseStation._Node(
-            device=self, arlo=arlo, base_station=base_station, log=log))
+        self.arlo_device_id = id
+        self.arlo = arlo
+        self.base_station = base_station
+        self.log = log
+
+        self.add_node(HomieArloBaseStation._Node(device=self, log=log))
 
         self.start()
 
@@ -127,12 +133,10 @@ class HomieArloBaseStation(Device_Base):
         return self.get_node('base-station')
 
     class _Node(Node_Base):
-        def __init__(self, device, arlo, base_station, log):
+        def __init__(self, device, log):
             super().__init__(device=device, id='base-station',
                              name='Base Station', type_='base-station')
 
-            self.arlo = arlo
-            self.base_station = base_station
             self.log = log
 
             self.add_property(
@@ -141,7 +145,7 @@ class HomieArloBaseStation(Device_Base):
 
         def _set_active_modes(self, value):
             self.log.info('Setting Arlo mode to %s', value)
-            self.arlo.CustomMode(self.base_station, value)
+            self.device.arlo.CustomMode(self.device.base_station, value)
 
         @property
         def active_modes(self):

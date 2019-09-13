@@ -102,7 +102,7 @@ class ArloMqtt:
         for id, base in bases.items():
             if id not in self.arlo_bases:
                 self.arlo_bases[id] = HomieArloBaseStation(
-                    id=id.lower(),
+                    id=id,
                     name=base['deviceName'],
                     mqtt_settings=self.mqtt_settings,
                     arlo=self.arlo,
@@ -119,7 +119,7 @@ class ArloMqtt:
         for id, cam in cams.items():
             if id not in self.arlo_cams:
                 self.arlo_cams[id] = HomieArloCamera(
-                    id=id.lower(),
+                    id=id,
                     name=cam['deviceName'],
                     mqtt_settings=self.mqtt_settings,
                     arlo=self.arlo,
