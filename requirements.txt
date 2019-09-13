@@ -1,2 +1,2 @@
 arlo==1.2.23
-paho-mqtt==1.4.0
+Homie3==0.3.0

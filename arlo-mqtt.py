@@ -3,13 +3,12 @@
 import argparse
 import json
 import logging
-import paho.mqtt.client as mqtt
 import os
-import sys
 import threading
 import time
 
 from arlo import Arlo
+from arlo_homie import HomieArloCamera, HomieArloBaseStation
 
 
 class ArloMqtt:
@@ -19,29 +18,22 @@ class ArloMqtt:
             self.log.setLevel(logging.DEBUG)
 
         self.report_interval = args.report_interval
-        self.topic_root = args.topic_root
 
-        self.report_thread = threading.Thread(target=self.report_thread_fn, daemon=True)
-        self.arlo_event_thread = threading.Thread(target=self.arlo_event_thread_fn, daemon=True)
+        self.report_thread = threading.Thread(
+            target=self.report_thread_fn, daemon=True)
         self.stop = threading.Event()
         self.last_reported_ts = time.time()
 
-        self.log.info('Connecting to Arlo')
-        self.arlo = Arlo(args.arlo_user, args.arlo_pass)
+        self.arlo_user = args.arlo_user
+        self.arlo_pass = args.arlo_pass
 
-        self.mc = mqtt.Client()
-        self.mc.enable_logger(self.log.getChild('mqtt'))
-        self.mc.username_pw_set(args.mqtt_user, args.mqtt_pass)
-        if args.tls:
-            self.mc.tls_set()
+        self.mqtt_settings = {
+            'MQTT_BROKER': args.broker,
+            'MQTT_PORT': args.port,
+            'MQTT_USERNAME': args.mqtt_user,
+            'MQTT_PASSWORD': args.mqtt_pass,
+        }
 
-        self.mc.on_connect = self.on_connect
-        self.mc.message_callback_add(args.topic_root + '/cmd/+', self.on_base_cmd)
-        self.mc.message_callback_add(args.topic_root + '/+/cmd/+', self.on_camera_cmd)
-
-        self.log.info('Connecting to MQTT broker')
-        self.mc.connect(args.broker, args.port)
-    
     def report_thread_fn(self):
         try:
             while True:
@@ -50,27 +42,19 @@ class ArloMqtt:
 
                 if self.stop.wait(self.report_interval):
                     break
+        except Exception:
+            self.log.exception('Report thread failed')
         finally:
             self.log.info('Report thread stopped')
             self.stop.set()
-    
-    def arlo_event_thread_fn(self):
-        try:
-            self.arlo.HandleEvents(self.arlo_base, self.on_arlo_event)
-        finally:
-            self.log.info('Arlo event handler stopped')
-            self.stop.set()
 
-    def on_arlo_event(self, arlo, event):
-        self.log.debug('Received Arlo event %s', json.dumps(event))
-    
     def run(self):
-        self.arlo_base = self.arlo.GetDevices('basestation')[0]
-        self.mc.loop_start()
-        self.report_thread.start()
+        self.log.info('Connecting to Arlo')
+        self.arlo = Arlo(self.arlo_user, self.arlo_pass)
+        self.arlo_bases = {}
+        self.arlo_cams = {}
 
-        # Event support isn't robust at the moment. It also interferes with mobile app.
-        #self.arlo_event_thread.start()
+        self.report_thread.start()
 
         try:
             while True:
@@ -83,87 +67,83 @@ class ArloMqtt:
         finally:
             self.log.info('Main thread stopped')
             self.stop.set()
-            self.mc.loop_stop()
-
-    def on_connect(self, client, userdata, flags, rc):
-        self.log.debug('on_connect. %s', mqtt.connack_string(rc))
-
-        if rc == mqtt.CONNACK_ACCEPTED:
-            self.log.info('Connected to MQTT broker. Subscribing to topics')
-            self.mc.subscribe(self.topic_root + '/cmd/+')
-            self.mc.subscribe(self.topic_root + '/+/cmd/+')
-        else:
-            self.log.critical('Failed to connect to MQTT broker. %s', mqtt.connack_string(rc))
-            self.stop.set()
-    
-    def on_base_cmd(self, client, userdata, msg):
-        parts = msg.topic.split('/')
-        cmd = parts[-1]
-        payload = str(msg.payload, encoding='utf-8')
-        self.log.info('Received base command %s [%s]', cmd, payload)
-
-        if cmd == 'mode':
-            self.log.info('Setting Arlo mode to %s', payload)
-            self.arlo.CustomMode(self.arlo_base, payload)
-            modes = ','.join(self.arlo.GetModesV2()[0]['activeModes'])
-            self.publish(self.topic_root + '/activeModes', modes)
-        else:
-            self.log.warn('Ignoring unknown base command %s', cmd)
-
-    def on_camera_cmd(self, client, userdata, msg):
-        parts = msg.topic.split('/')
-        cmd = parts[-1]
-        camera = parts[-3]
-        payload = str(msg.payload, encoding='utf-8')
-        self.log.info('Received command %s [%s] for camera %s', cmd, payload, camera)
-
-        if cmd == 'switch':
-            privacy = payload.upper() == 'OFF'
-            self.log.info('Toggling Arlo camera %s privacy %s', camera, privacy)
-            resp = self.arlo.ToggleCamera(self.arlo_base, {'deviceId': camera}, privacy)
-            privacy = resp['properties']['privacyActive']
-            self.publish('{}/{}/switch'.format(self.topic_root, camera), 'OFF' if privacy else 'ON')
-        else:
-            self.log.warn('Ignoring unknown camera command %s', cmd)
 
     def report(self):
         self.log.info('Reporting status')
-        states = self.arlo.GetCameraState(self.arlo_base)['properties']
 
-        states = {
-            s['serialNumber']: {
-                'switch': 'OFF' if s['privacyActive'] else 'ON',
-                'batteryLevel': s['batteryLevel'],
-                'chargingState': s['chargingState'],
-                'connectionState': s['connectionState'],
-                'signalStrength': s['signalStrength'],
-            }
-            for s in states
+        # Fetching devices and states from Arlo
+        devices = [
+            dev
+            for dev in self.arlo.GetDevices() if dev['state'] != 'removed'
+        ]
+
+        bases = {
+            dev['deviceId']: dev
+            for dev in devices if dev['deviceType'] == 'basestation'
         }
-        states['activeModes'] = ','.join(self.arlo.GetModesV2()[0]['activeModes']) 
 
-        cams = self.arlo.GetDevices('camera')
-        for cam in cams:
-            device_id = cam['deviceId']
-            if device_id in states:
-                states[device_id]['lastImageUrl'] = cam['presignedLastImageUrl']
+        cams = {
+            dev['deviceId']: dev
+            for dev in devices if dev['deviceType'] == 'camera'
+        }
 
-        self.publish(self.topic_root, states)
+        for mode in self.arlo.GetModesV2():
+            id = mode['gatewayId']
+            if id in bases:
+                bases[id]['modeState'] = mode
 
-    def publish(self, topic, value):
-        if not isinstance(value, dict):
-            self.mc.publish(topic, value)
-            return
+        for base in bases.values():
+            for state in self.arlo.GetCameraState(base)['properties']:
+                id = state['serialNumber']
+                if id in cams:
+                    cams[id]['cameraState'] = state
 
-        for k, v in value.items():
-            self.publish('{}/{}'.format(topic, k), v)
+        # Syncing devices and states to MQTT Homie
+        for id, base in bases.items():
+            if id not in self.arlo_bases:
+                self.arlo_bases[id] = HomieArloBaseStation(
+                    id=id.lower(),
+                    name=base['deviceName'],
+                    mqtt_settings=self.mqtt_settings,
+                    arlo=self.arlo,
+                    base_station=base,
+                    log=self.log.getChild('homie'),
+                )
+
+            self.arlo_bases[id].node.active_modes = ','.join(
+                base['modeState']['activeModes'])
+
+        for id in [id for id in self.arlo_bases if id not in bases]:
+            del self.arlo_bases[id]
+
+        for id, cam in cams.items():
+            if id not in self.arlo_cams:
+                self.arlo_cams[id] = HomieArloCamera(
+                    id=id.lower(),
+                    name=cam['deviceName'],
+                    mqtt_settings=self.mqtt_settings,
+                    arlo=self.arlo,
+                    base_station=bases[cam['parentId']],
+                    log=self.log.getChild('homie'),
+                )
+
+            self.arlo_cams[id].node.privacy_active = cam['cameraState']['privacyActive']
+            self.arlo_cams[id].node.battery_level = cam['cameraState']['batteryLevel']
+            self.arlo_cams[id].node.charging_state = cam['cameraState']['chargingState']
+            self.arlo_cams[id].node.connection_state = cam['cameraState']['connectionState']
+            self.arlo_cams[id].node.signal_strength = cam['cameraState']['signalStrength']
+            self.arlo_cams[id].node.last_image = cam['presignedLastImageUrl']
+
+        for id in [id for id in self.arlo_cams if id not in cams]:
+            del self.arlo_cams[id]
 
 
 def main():
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    parser = argparse.ArgumentParser(description='A simple bridge between Arlo and MQTT.')
+    parser = argparse.ArgumentParser(
+        description='A simple bridge between Arlo and MQTT.')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Enable debug logging.')
     parser.add_argument('-i', '--report-interval', default=600, type=int,
@@ -180,14 +160,12 @@ def main():
                        help='MQTT broker address. Defaults to localhost.')
     group.add_argument('--port', default=1883, type=int,
                        help='MQTT broker port. Defaults to 1883.')
-    group.add_argument('--tls', action='store_true',
-                       help='Use TLS connection to MQTT broker.')
+    #group.add_argument('--tls', action='store_true',
+    #                   help='Use TLS connection to MQTT broker.')
     group.add_argument('--mqtt-user', default=os.environ.get('ARLO_MQTT_USER', None),
                        help='MQTT username. Can also be set via env ARLO_MQTT_USER.')
     group.add_argument('--mqtt-pass', default=os.environ.get('ARLO_MQTT_PASS', None),
                        help='MQTT password. Can also be set via env ARLO_MQTT_PASS.')
-    group.add_argument('--topic-root', default='arlo',
-                       help='MQTT topic root. Defaults to arlo.')
 
     args = parser.parse_args()
     ArloMqtt(args).run()

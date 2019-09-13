@@ -2,14 +2,14 @@
 [![Build Status](https://travis-ci.org/jasonxh/arlo-mqtt.svg?branch=master)](https://travis-ci.org/jasonxh/arlo-mqtt)
 
 A simple bridge between Arlo and MQTT.
-Based on the Arlo python module from [jeffreydwalter/arlo](https://github.com/jeffreydwalter/arlo).
+Follows [Homie v3.0.1](https://homieiot.github.io/specification/spec-core-v3_0_1/) convention in exposing devices in MQTT.
+Based on the Arlo python module from [jeffreydwalter/arlo](https://github.com/jeffreydwalter/arlo) and Homie3 python module from [mjcumming/HomieV3](https://github.com/mjcumming/HomieV3).
 
 # Usage
 ```
 usage: arlo-mqtt.py [-h] [-d] [-i REPORT_INTERVAL] [--arlo-user ARLO_USER]
                     [--arlo-pass ARLO_PASS] [--broker BROKER] [--port PORT]
-                    [--tls] [--mqtt-user MQTT_USER] [--mqtt-pass MQTT_PASS]
-                    [--topic-root TOPIC_ROOT]
+                    [--mqtt-user MQTT_USER] [--mqtt-pass MQTT_PASS]
 
 A simple bridge between Arlo and MQTT.
 
@@ -29,13 +29,10 @@ Arlo:
 MQTT:
   --broker BROKER       MQTT broker address. Defaults to localhost.
   --port PORT           MQTT broker port. Defaults to 1883.
-  --tls                 Use TLS connection to MQTT broker.
   --mqtt-user MQTT_USER
                         MQTT username. Can also be set via env ARLO_MQTT_USER.
   --mqtt-pass MQTT_PASS
                         MQTT password. Can also be set via env ARLO_MQTT_PASS.
-  --topic-root TOPIC_ROOT
-                        MQTT topic root. Defaults to arlo.
 ```
 
 # Docker
