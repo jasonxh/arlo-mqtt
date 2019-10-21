@@ -41,7 +41,7 @@ class HomieArloCamera(Device_Base):
             self.add_property(
                 Property_Integer(node=self, id='signal', name='Signal', settable=False))
             self.add_property(
-                Property_String(node=self, id='last-image', name='Last Image'))
+                Property_String(node=self, id='lastimage', name='Last Image'))
 
         def _set_switch(self, on):
             privacy = not on
@@ -106,13 +106,13 @@ class HomieArloCamera(Device_Base):
 
         @property
         def last_image(self):
-            return self.get_property('last-image').value
+            return self.get_property('lastimage').value
 
         @last_image.setter
         def last_image(self, value):
-            self.log.debug('[%s] Updating last-image to %s',
+            self.log.debug('[%s] Updating lastimage to %s',
                            self.device.name, value)
-            self.get_property('last-image').value = value
+            self.get_property('lastimage').value = value
 
 
 class HomieArloBaseStation(Device_Base):
@@ -130,17 +130,17 @@ class HomieArloBaseStation(Device_Base):
 
     @property
     def node(self):
-        return self.get_node('base-station')
+        return self.get_node('basestation')
 
     class _Node(Node_Base):
         def __init__(self, device, log):
-            super().__init__(device=device, id='base-station',
-                             name='Base Station', type_='base-station')
+            super().__init__(device=device, id='basestation',
+                             name='Base Station', type_='basestation')
 
             self.log = log
 
             self.add_property(
-                Property_String(node=self, id='active-modes', name='Active Modes',
+                Property_String(node=self, id='activemodes', name='Active Modes',
                                 settable=True, set_value=self._set_active_modes))
 
         def _set_active_modes(self, value):
@@ -149,13 +149,13 @@ class HomieArloBaseStation(Device_Base):
 
         @property
         def active_modes(self):
-            return self.get_property('active-modes').value
+            return self.get_property('activemodes').value
 
         @active_modes.setter
         def active_modes(self, value):
-            self.log.debug('[%s] Updating active-modes to %s',
+            self.log.debug('[%s] Updating activemodes to %s',
                            self.device.name, value)
-            self.get_property('active-modes').value = value
+            self.get_property('activemodes').value = value
 
 
 def _parse_bool(value):
