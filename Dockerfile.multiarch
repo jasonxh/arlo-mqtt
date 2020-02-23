@@ -1,3 +1,5 @@
+ARG ARCH
+
 FROM bash AS builder
 ARG QEMU_ARCH
 
@@ -7,7 +9,6 @@ RUN wget -O- https://github.com/balena-io/qemu/releases/download/v3.0.0%2Bresin/
  && rm -fr qemu-3.0.0+resin-$QEMU_ARCH
 
 
-ARG ARCH
 FROM $ARCH/python:3.7-alpine
 ARG QEMU_ARCH
 COPY --from=builder /qemu/qemu-$QEMU_ARCH-static /usr/bin/
