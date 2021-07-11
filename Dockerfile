@@ -1,6 +1,5 @@
 FROM python:3.7 AS builder
 
-RUN pip install -U pip
 RUN pip install poetry==1.1.7
 
 WORKDIR /arlo-mqtt
