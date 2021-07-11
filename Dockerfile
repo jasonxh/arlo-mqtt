@@ -1,10 +1,21 @@
+FROM python:3.7 AS builder
+
+RUN pip install poetry
+
+WORKDIR /arlo-mqtt
+
+COPY poetry.lock pyproject.toml ./
+
+RUN poetry export -o requirements.txt
+
+
 FROM python:3.7-alpine
 
 LABEL maintainer="jasonxh@gmail.com"
 
 WORKDIR /arlo-mqtt
 
-COPY requirements.txt .
+COPY --from=builder /arlo-mqtt/requirements.txt .
 
 RUN apk add --no-cache --virtual .build-deps gcc musl-dev linux-headers \
  && pip install -r requirements.txt \
