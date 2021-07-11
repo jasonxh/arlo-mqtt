@@ -1,5 +1,5 @@
 # arlo-mqtt
-[![Build Status](https://travis-ci.org/jasonxh/arlo-mqtt.svg?branch=master)](https://travis-ci.org/jasonxh/arlo-mqtt)
+[![CI](https://github.com/jasonxh/arlo-mqtt/actions/workflows/ci.yaml/badge.svg?event=push)](https://github.com/jasonxh/arlo-mqtt/actions/workflows/ci.yaml)
 
 A simple bridge between Arlo and MQTT.
 Follows [Homie v3.0.1](https://homieiot.github.io/specification/spec-core-v3_0_1/) convention in exposing devices in MQTT.
