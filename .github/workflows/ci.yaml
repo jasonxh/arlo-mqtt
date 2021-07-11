@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install Poetry
-        run: pip install poetry=1.1.7
+        run: pip install poetry==1.1.7
 
       - name: Export requirements.txt
         run: poetry export -o requirements.txt
