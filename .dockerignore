@@ -1,6 +1,5 @@
 *
 !LICENSE
 !README.md
-!poetry.lock
-!pyproject.toml
+!requirements.txt
 !*.py
