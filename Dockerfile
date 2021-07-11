@@ -1,6 +1,7 @@
 FROM python:3.7 AS builder
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/b2ac34ebeda1b7cc2965ba70e5bdecb1fe88214f/get-poetry.py | python -
+RUN pip install -U pip
+RUN pip install poetry==1.1.7
 
 WORKDIR /arlo-mqtt
 
