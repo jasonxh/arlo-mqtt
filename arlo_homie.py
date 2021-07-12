@@ -88,6 +88,7 @@ class HomieArloCamera(Device_Base):
                 id=self._PropertyId.MOTION_DETECTED.value,
                 name='Motion Detected',
                 settable=False,
+                retained=False,
             ))
 
         @property
