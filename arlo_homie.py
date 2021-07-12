@@ -44,8 +44,8 @@ class HomieArloCamera(Device_Base):
             CHARGING = 'charging'
             CONNECTION = 'connection'
             SIGNAL = 'signal'
-            LAST_IMAGE = 'last-image'
-            MOTION_DETECTED = 'motion-detected'
+            LAST_IMAGE = 'lastimage'
+            MOTION_DETECTED = 'motiondetected'
 
         def __init__(self, device: 'HomieArloCamera', log: Logger) -> None:
             super().__init__(device=device, id=self.ID, name='Camera', type_='camera')
@@ -195,7 +195,7 @@ class HomieArloBaseStation(Device_Base):
         @unique
         class _PropertyId(Enum):
             MODE = 'mode'
-            AVAILABLE_MODES = 'available-modes'
+            AVAILABLE_MODES = 'availablemodes'
 
         def __init__(self, device: 'HomieArloBaseStation', log: Logger) -> None:
             super().__init__(device=device, id=self.ID, name='Base Station', type_='basestation')
