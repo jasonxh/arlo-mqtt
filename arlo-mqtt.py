@@ -4,40 +4,32 @@ import argparse
 import logging
 import os
 import threading
-import time
 import typing as t
+from functools import partial
 
-from arlo import Arlo
+from pyaarlo import ArloBase, ArloCamera, PyArlo, constant
 
 from arlo_homie import HomieArloBaseStation, HomieArloCamera
 
 
 class ArloMqtt:
     log: logging.Logger
-    report_interval: int
-    report_thread: threading.Thread
     stop: threading.Event
-    last_reported_ts: float
+
     arlo_user: str
     arlo_pass: str
     mqtt_settings: t.Dict[str, t.Any]
 
-    arlo: Arlo
-    arlo_bases: t.Dict[str, HomieArloBaseStation]
-    arlo_cams: t.Dict[str, HomieArloCamera]
+    arlo: PyArlo
+    arlo_bases: t.Dict[str, t.Tuple[ArloBase, HomieArloBaseStation]]
+    arlo_cams: t.Dict[str, t.Tuple[ArloCamera, HomieArloCamera]]
 
     def __init__(self, args: argparse.Namespace) -> None:
         self.log = logging.getLogger(type(self).__name__)
         if args.debug:
             self.log.setLevel(logging.DEBUG)
 
-        self.report_interval = args.report_interval
-
-        self.report_thread = threading.Thread(
-            target=self.report_thread_fn)
-        self.report_thread.daemon = True
         self.stop = threading.Event()
-        self.last_reported_ts = time.time()
 
         self.arlo_user = args.arlo_user
         self.arlo_pass = args.arlo_pass
@@ -49,108 +41,131 @@ class ArloMqtt:
             'MQTT_PASSWORD': args.mqtt_pass,
         }
 
-    def report_thread_fn(self) -> None:
-        try:
-            while True:
-                self.report()
-                self.last_reported_ts = time.time()
-
-                if self.stop.wait(self.report_interval):
-                    break
-        except Exception:
-            self.log.exception('Report thread failed')
-        finally:
-            self.log.info('Report thread stopped')
-            self.stop.set()
-
     def run(self) -> None:
         self.log.info('Connecting to Arlo')
-        self.arlo = Arlo(self.arlo_user, self.arlo_pass)
-        self.arlo_bases = {}
-        self.arlo_cams = {}
+        self.arlo = PyArlo(
+            username=self.arlo_user,
+            password=self.arlo_pass,
+            save_state=False,
+        )
 
-        self.report_thread.start()
-
-        try:
-            while True:
-                if self.stop.wait(self.report_interval * 2):
-                    break
-
-                if time.time() - self.last_reported_ts > self.report_interval * 2:
-                    self.log.error('Report timeout')
-                    break
-        finally:
-            self.log.info('Main thread stopped')
-            self.stop.set()
-
-    def report(self) -> None:
-        self.log.info('Reporting status')
-
-        # Fetching devices and states from Arlo
-        devices = [
-            dev
-            for dev in self.arlo.GetDevices() if dev['state'] != 'removed'
-        ]
-
-        bases = {
-            dev['deviceId']: dev
-            for dev in devices if dev['deviceType'] == 'basestation'
+        self.arlo_bases = {
+            base.device_id: (base, HomieArloBaseStation(
+                id=base.device_id,
+                name=base.name,
+                mqtt_settings=self.mqtt_settings,
+                set_mode=partial(self._set_base_mode, base),
+                log=self.log.getChild('homie'),
+            ))
+            for base in self.arlo.base_stations
         }
 
-        cams = {
-            dev['deviceId']: dev
-            for dev in devices if dev['deviceType'] == 'camera'
+        self.arlo_cams = {
+            cam.device_id: (cam, HomieArloCamera(
+                id=cam.device_id,
+                name=cam.name,
+                mqtt_settings=self.mqtt_settings,
+                set_switch=partial(self._set_camera_switch, cam),
+                log=self.log.getChild('homie'),
+            ))
+            for cam in self.arlo.cameras
         }
 
-        for mode in self.arlo.GetModesV2():
-            id = mode['gatewayId']
-            if id in bases:
-                bases[id]['modeState'] = mode
+        for base, homie in self.arlo_bases.values():
+            self._link_base_state(base, homie)
 
-        for base in bases.values():
-            for state in self.arlo.GetCameraState(base)['properties']:
-                id = state['serialNumber']
-                if id in cams:
-                    cams[id]['cameraState'] = state
+        for cam, homie in self.arlo_cams.values():
+            self._link_camera_state(cam, homie)
 
-        # Syncing devices and states to MQTT Homie
-        for id, base in bases.items():
-            if id not in self.arlo_bases:
-                self.arlo_bases[id] = HomieArloBaseStation(
-                    id=id,
-                    name=base['deviceName'],
-                    mqtt_settings=self.mqtt_settings,
-                    arlo=self.arlo,
-                    base_station=base,
-                    log=self.log.getChild('homie'),
-                )
+        # There's no code path that sets this currently.
+        self.stop.wait()
+        self.log.error('Main thread stopped')
 
-            self.arlo_bases[id].node.active_modes = ','.join(
-                base['modeState']['activeModes'])
+    def _set_base_mode(self, base: ArloBase, mode: str) -> None:
+        self.log.info('Setting Arlo mode to %s', mode)
+        base.mode = mode
 
-        for id in [id for id in self.arlo_bases if id not in bases]:
-            del self.arlo_bases[id]
+    def _set_camera_switch(self, cam: ArloCamera, on: bool) -> None:
+        self.log.info('Turning %s Arlo camera %s',
+                      'on' if on else 'off', cam.name)
+        if on:
+            cam.turn_on()
+        else:
+            cam.turn_off()
 
-        for id, cam in cams.items():
-            if id not in self.arlo_cams:
-                self.arlo_cams[id] = HomieArloCamera(
-                    id=id,
-                    name=cam['deviceName'],
-                    mqtt_settings=self.mqtt_settings,
-                    arlo=self.arlo,
-                    base_station=bases[cam['parentId']],
-                    log=self.log.getChild('homie'),
-                )
+    def _link_base_state(self, base: ArloBase, homie: HomieArloBaseStation) -> None:
+        def sync_mode() -> None:
+            homie.node.mode = base.mode
 
-            self.arlo_cams[id].node.privacy_active = cam['cameraState']['privacyActive']
-            self.arlo_cams[id].node.battery_level = cam['cameraState']['batteryLevel']
-            self.arlo_cams[id].node.charging_state = cam['cameraState']['chargingState']
-            self.arlo_cams[id].node.connection_state = cam['cameraState']['connectionState']
-            self.arlo_cams[id].node.signal_strength = cam['cameraState']['signalStrength']
-            self.arlo_cams[id].node.last_image = cam['presignedLastImageUrl']
+        def sync_available_modes() -> None:
+            homie.node.available_modes = base.available_modes
 
-        for id in [id for id in self.arlo_cams if id not in cams]:
-            del self.arlo_cams[id]
+        links: t.Dict[str, t.Callable[[], None]] = {
+            constant.MODE_KEY: sync_mode,
+            '__NON_EXISTENT_KEY_1': sync_available_modes,
+        }
+
+        def cb(device: ArloBase, attr: str, value: t.Any) -> None:
+            self.log.debug('[base] device=%s, attr=%s value=%s',
+                           device.name, attr, '<bytes>' if isinstance(value, bytes) else value)
+
+            link = links.get(attr)
+            if link:
+                link()
+
+        base.add_attr_callback('*', cb)
+
+        # Perform initial sync
+        for link in links.values():
+            link()
+
+    def _link_camera_state(self, cam: ArloCamera, homie: HomieArloCamera) -> None:
+        def sync_is_on() -> None:
+            homie.node.is_on = cam.is_on
+
+        def sync_battery() -> None:
+            homie.node.battery_level = cam.battery_level
+
+        def sync_charging() -> None:
+            homie.node.charging_state = cam.is_charging
+
+        def sync_connection() -> None:
+            homie.node.connection_state = \
+                cam.attribute(constant.CONNECTION_KEY)
+
+        def sync_signal() -> None:
+            homie.node.signal_strength = cam.signal_strength
+
+        def sync_last_image() -> None:
+            homie.node.last_image = cam.last_image
+
+        def sync_motion() -> None:
+            homie.node.motion_detected = cam.attribute(
+                constant.MOTION_DETECTED_KEY)
+
+        links: t.Dict[str, t.Callable[[], None]] = {
+            constant.PRIVACY_KEY: sync_is_on,
+            constant.BATTERY_KEY: sync_battery,
+            constant.CHARGING_KEY: sync_charging,
+            constant.CONNECTION_KEY: sync_connection,
+            constant.SIGNAL_STR_KEY: sync_signal,
+            constant.LAST_IMAGE_KEY: sync_last_image,
+            constant.MOTION_DETECTED_KEY: sync_motion,
+        }
+
+        def cb(device: ArloCamera, attr: str, value: t.Any) -> None:
+            self.log.debug('[camera] device=%s, attr=%s value=%s',
+                           device.name, attr, '<bytes>' if isinstance(value, bytes) else value)
+
+            link = links.get(attr)
+            if link:
+                link()
+
+        cam.add_attr_callback('*', cb)
+
+        # Perform initial sync
+        for link in links.values():
+            link()
 
 
 def main() -> None:
@@ -167,8 +182,6 @@ def main() -> None:
         description='A simple bridge between Arlo and MQTT.')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Enable debug logging.')
-    parser.add_argument('-i', '--report-interval', default=600, type=int,
-                        help='Interval in seconds between state refreshes. Defaults to 600.')
 
     group = parser.add_argument_group('Arlo')
     group.add_argument('--arlo-user', **_default_env('ARLO_USER'),
