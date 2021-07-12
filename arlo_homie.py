@@ -235,7 +235,7 @@ class HomieArloBaseStation(Device_Base):
             value = json.dumps(modes)
             self.log.debug('[%s] Updating available modes to %s',
                            self.device.name, value)
-            self.get_property(self._PropertyId.MODE.value).value = value
+            self.get_property(self._PropertyId.AVAILABLE_MODES.value).value = value
 
 
 def _parse_bool(value) -> bool:
