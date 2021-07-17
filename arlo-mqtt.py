@@ -95,7 +95,7 @@ class ArloMqtt:
 
     def _link_base_state(self, base: ArloBase, homie: HomieArloBaseStation) -> None:
         def sync_mode() -> None:
-            homie.node.mode = base.mode
+            homie.node.mode = base.mode.lower()
 
         def sync_available_modes() -> None:
             homie.node.available_modes = base.available_modes
