@@ -47,6 +47,7 @@ class ArloMqtt:
             username=self.arlo_user,
             password=self.arlo_pass,
             save_state=False,
+            stream_timeout=90,
         )
 
         self.arlo_bases = {
@@ -150,6 +151,7 @@ class ArloMqtt:
             constant.CONNECTION_KEY: sync_connection,
             constant.SIGNAL_STR_KEY: sync_signal,
             constant.LAST_IMAGE_KEY: sync_last_image,
+            constant.LAST_IMAGE_DATA_KEY: sync_last_image,
             constant.MOTION_DETECTED_KEY: sync_motion,
         }
 
