@@ -3,7 +3,7 @@
 
 A simple bridge between Arlo and MQTT.
 Follows [Homie v3.0.1](https://homieiot.github.io/specification/spec-core-v3_0_1/) convention in exposing devices in MQTT.
-Based on the Arlo python module from [jeffreydwalter/arlo](https://github.com/jeffreydwalter/arlo) and Homie3 python module from [mjcumming/HomieV3](https://github.com/mjcumming/HomieV3).
+Based on the Arlo python module from [twrecked/pyaarlo](https://github.com/twrecked/pyaarlo) and Homie3 python module from [mjcumming/HomieV3](https://github.com/mjcumming/HomieV3).
 
 # Usage
 ```
@@ -16,9 +16,6 @@ A simple bridge between Arlo and MQTT.
 optional arguments:
   -h, --help            show this help message and exit
   -d, --debug           Enable debug logging.
-  -i REPORT_INTERVAL, --report-interval REPORT_INTERVAL
-                        Interval in seconds between state refreshes. Defaults
-                        to 600.
 
 Arlo:
   --arlo-user ARLO_USER
