@@ -7,9 +7,9 @@ Based on the Arlo python module from [twrecked/pyaarlo](https://github.com/twrec
 
 # Usage
 ```
-usage: arlo-mqtt.py [-h] [-d] [-i REPORT_INTERVAL] [--arlo-user ARLO_USER]
-                    [--arlo-pass ARLO_PASS] [--broker BROKER] [--port PORT]
-                    [--mqtt-user MQTT_USER] [--mqtt-pass MQTT_PASS]
+usage: arlo-mqtt.py [-h] [-d] [--arlo-user ARLO_USER] [--arlo-pass ARLO_PASS]
+                    [--broker BROKER] [--port PORT] [--mqtt-user MQTT_USER]
+                    [--mqtt-pass MQTT_PASS]
 
 A simple bridge between Arlo and MQTT.
 
