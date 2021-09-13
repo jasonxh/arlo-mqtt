@@ -18,6 +18,9 @@ jobs:
       - name: Install Poetry
         run: pip install poetry==1.1.7
 
+      - name: Prepare venv
+        run: poetry install --no-interaction
+
       - name: Run mypy
         run: poetry run mypy --install-types --non-interactive .
 
