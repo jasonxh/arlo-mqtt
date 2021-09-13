@@ -10,6 +10,7 @@ RUN apk add --no-cache --virtual .build-deps gcc musl-dev linux-headers \
  && pip install -r requirements.txt \
  && apk del .build-deps
 
-COPY . .
+COPY dist dist
+RUN pip install dist/*.whl
 
-ENTRYPOINT [ "/arlo-mqtt/arlo-mqtt.py" ]
+ENTRYPOINT [ "arlo-mqtt" ]

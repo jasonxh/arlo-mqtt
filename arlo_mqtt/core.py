@@ -1,15 +1,11 @@
-#!/usr/bin/env python
-
-import argparse
 import logging
-import os
 import threading
 import typing as t
 from functools import partial
 
 from pyaarlo import ArloBase, ArloCamera, PyArlo, constant
 
-from arlo_homie import HomieArloBaseStation, HomieArloCamera
+from arlo_mqtt.homie import HomieArloBaseStation, HomieArloCamera
 
 
 class ArloMqtt:
@@ -24,21 +20,30 @@ class ArloMqtt:
     arlo_bases: t.Dict[str, t.Tuple[ArloBase, HomieArloBaseStation]]
     arlo_cams: t.Dict[str, t.Tuple[ArloCamera, HomieArloCamera]]
 
-    def __init__(self, args: argparse.Namespace) -> None:
+    def __init__(
+            self,
+            arlo_user: str,
+            arlo_pass: str,
+            mqtt_broker: str,
+            mqtt_port: int,
+            mqtt_user: str,
+            mqtt_pass: str,
+            debug: bool = False,
+    ) -> None:
         self.log = logging.getLogger(type(self).__name__)
-        if args.debug:
+        if debug:
             self.log.setLevel(logging.DEBUG)
 
         self.stop = threading.Event()
 
-        self.arlo_user = args.arlo_user
-        self.arlo_pass = args.arlo_pass
+        self.arlo_user = arlo_user
+        self.arlo_pass = arlo_pass
 
         self.mqtt_settings = {
-            'MQTT_BROKER': args.broker,
-            'MQTT_PORT': args.port,
-            'MQTT_USERNAME': args.mqtt_user,
-            'MQTT_PASSWORD': args.mqtt_pass,
+            'MQTT_BROKER': mqtt_broker,
+            'MQTT_PORT': mqtt_port,
+            'MQTT_USERNAME': mqtt_user,
+            'MQTT_PASSWORD': mqtt_pass,
         }
 
     def run(self) -> None:
@@ -168,44 +173,3 @@ class ArloMqtt:
         # Perform initial sync
         for link in links.values():
             link()
-
-
-def main() -> None:
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    def _default_env(env_var: str) -> t.Dict[str, t.Any]:
-        if env_var in os.environ:
-            return {'default': os.environ[env_var]}
-        else:
-            return {'required': True}
-
-    parser = argparse.ArgumentParser(
-        description='A simple bridge between Arlo and MQTT.')
-    parser.add_argument('-d', '--debug', action='store_true',
-                        help='Enable debug logging.')
-
-    group = parser.add_argument_group('Arlo')
-    group.add_argument('--arlo-user', **_default_env('ARLO_USER'),
-                       help='Arlo username. Can also be set via env ARLO_USER.')
-    group.add_argument('--arlo-pass', **_default_env('ARLO_PASS'),
-                       help='Arlo password. Can also be set via env ARLO_PASS.')
-
-    group = parser.add_argument_group('MQTT')
-    group.add_argument('--broker', default='localhost',
-                       help='MQTT broker address. Defaults to localhost.')
-    group.add_argument('--port', default=1883, type=int,
-                       help='MQTT broker port. Defaults to 1883.')
-    # group.add_argument('--tls', action='store_true',
-    #                   help='Use TLS connection to MQTT broker.')
-    group.add_argument('--mqtt-user', **_default_env('ARLO_MQTT_USER'),
-                       help='MQTT username. Can also be set via env ARLO_MQTT_USER.')
-    group.add_argument('--mqtt-pass', **_default_env('ARLO_MQTT_PASS'),
-                       help='MQTT password. Can also be set via env ARLO_MQTT_PASS.')
-
-    args = parser.parse_args()
-    ArloMqtt(args).run()
-
-
-if __name__ == "__main__":
-    main()
