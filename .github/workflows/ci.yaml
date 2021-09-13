@@ -18,8 +18,14 @@ jobs:
       - name: Install Poetry
         run: pip install poetry==1.1.7
 
+      - name: Run mypy
+        run: poetry run mypy --install-types --non-interactive .
+
       - name: Export requirements.txt
         run: poetry export -o requirements.txt
+
+      - name: Build wheel
+        run: poetry build --format wheel
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
