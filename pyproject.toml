@@ -2,7 +2,7 @@
 authors = ["Jason Xia <jasonxh@gmail.com>"]
 description = "A simple bridge between Arlo and MQTT."
 name = "arlo-mqtt"
-version = "0.1.0"
+version = "0.1.1"
 
 [tool.poetry.scripts]
 arlo-mqtt = "arlo_mqtt.cli:main"
