@@ -29,6 +29,7 @@ class ArloMqtt:
             mqtt_user: str,
             mqtt_pass: str,
             debug: bool = False,
+            pyaarlo_extras: t.Dict[str, t.Any] = {},
     ) -> None:
         self.log = logging.getLogger(type(self).__name__)
         if debug:
@@ -38,6 +39,7 @@ class ArloMqtt:
 
         self.arlo_user = arlo_user
         self.arlo_pass = arlo_pass
+        self.pyaarlo_extras = pyaarlo_extras
 
         self.mqtt_settings = {
             'MQTT_BROKER': mqtt_broker,
@@ -48,12 +50,13 @@ class ArloMqtt:
 
     def run(self) -> None:
         self.log.info('Connecting to Arlo')
-        self.arlo = PyArlo(
-            username=self.arlo_user,
-            password=self.arlo_pass,
-            save_state=False,
-            stream_timeout=90,
-        )
+        self.arlo = PyArlo(**{
+            'username': self.arlo_user,
+            'password': self.arlo_pass,
+            'save_state': False,
+            'stream_timeout': 90,
+            **self.pyaarlo_extras,  # Can be used to override anything above
+        })
 
         self.arlo_bases = {
             base.device_id: (base, HomieArloBaseStation(
