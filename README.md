@@ -7,9 +7,8 @@ Based on the Arlo python module from [twrecked/pyaarlo](https://github.com/twrec
 
 # Usage
 ```
-usage: arlo-mqtt [-h] [-d] [--arlo-user ARLO_USER] [--arlo-pass ARLO_PASS]
-                 [--broker BROKER] [--port PORT] [--mqtt-user MQTT_USER]
-                 [--mqtt-pass MQTT_PASS]
+usage: arlo-mqtt [-h] [-d] [--arlo-user ARLO_USER] [--arlo-pass ARLO_PASS] [--arlo-extras-json ARLO_EXTRAS_JSON]
+                 [--broker BROKER] [--port PORT] [--mqtt-user MQTT_USER] [--mqtt-pass MQTT_PASS]
 
 A simple bridge between Arlo and MQTT.
 
@@ -22,6 +21,9 @@ Arlo:
                         Arlo username. Can also be set via env ARLO_USER.
   --arlo-pass ARLO_PASS
                         Arlo password. Can also be set via env ARLO_PASS.
+  --arlo-extras-json ARLO_EXTRAS_JSON
+                        Pyaarlo extra options in JSON format. E.g., you can specify 2FA options here. Can also be
+                        set via env ARLO_EXTRAS_JSON.
 
 MQTT:
   --broker BROKER       MQTT broker address. Defaults to localhost.

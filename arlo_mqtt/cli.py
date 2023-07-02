@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import os
 import typing as t
@@ -26,14 +27,14 @@ def main() -> None:
                        help='Arlo username. Can also be set via env ARLO_USER.')
     group.add_argument('--arlo-pass', **_default_env('ARLO_PASS'),
                        help='Arlo password. Can also be set via env ARLO_PASS.')
+    group.add_argument('--arlo-extras-json', default=os.environ.get('ARLO_EXTRAS_JSON', '{}'),
+                       help='Pyaarlo extra options in JSON format. E.g., you can specify 2FA options here. Can also be set via env ARLO_EXTRAS_JSON.')
 
     group = parser.add_argument_group('MQTT')
     group.add_argument('--broker', default='localhost',
                        help='MQTT broker address. Defaults to localhost.')
     group.add_argument('--port', default=1883, type=int,
                        help='MQTT broker port. Defaults to 1883.')
-    # group.add_argument('--tls', action='store_true',
-    #                   help='Use TLS connection to MQTT broker.')
     group.add_argument('--mqtt-user', **_default_env('ARLO_MQTT_USER'),
                        help='MQTT username. Can also be set via env ARLO_MQTT_USER.')
     group.add_argument('--mqtt-pass', **_default_env('ARLO_MQTT_PASS'),
@@ -48,4 +49,5 @@ def main() -> None:
         mqtt_user=args.mqtt_user,
         mqtt_pass=args.mqtt_pass,
         debug=args.debug,
+        pyaarlo_extras=json.loads(args.arlo_extras_json),
     ).run()
