@@ -16,13 +16,19 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install Poetry
-        run: pip install poetry==1.1.7
+        run: pip install poetry==1.5.1
 
       - name: Prepare venv
         run: poetry install --no-interaction
 
+      - name: Run black
+        run: poetry run black --check .
+
+      - name: Run isort
+        run: poetry run isort --check .
+
       - name: Run mypy
-        run: poetry run mypy --install-types --non-interactive .
+        run: poetry run mypy .
 
       - name: Export requirements.txt
         run: poetry export -o requirements.txt
