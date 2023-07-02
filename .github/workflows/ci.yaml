@@ -31,7 +31,7 @@ jobs:
         run: poetry run mypy .
 
       - name: Export requirements.txt
-        run: poetry export -o requirements.txt
+        run: poetry export --without-hashes -o requirements.txt
 
       - name: Build wheel
         run: poetry build --format wheel
