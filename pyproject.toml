@@ -2,28 +2,26 @@
 authors = ["Jason Xia <jasonxh@gmail.com>"]
 description = "A simple bridge between Arlo and MQTT."
 name = "arlo-mqtt"
-version = "0.1.1"
+version = "0.1.2"
 
 [tool.poetry.scripts]
 arlo-mqtt = "arlo_mqtt.cli:main"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 
-Homie3 = "^0.3.0"
-pyaarlo = "^0.7.1"
+homie4 = "^0.4.0"
+pyaarlo = { git = "https://github.com/jasonxh/pyaarlo.git", rev = "37b343f" }
 
-[tool.poetry.dev-dependencies]
-autopep8 = "^1.5.7"
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
 ipykernel = "^6.0.1"
-mypy = "^0.910"
+isort = "^5.12.0"
+mypy = "^1.4.1"
 
 [[tool.mypy.overrides]]
+module = ["homie.*", "pyaarlo.*"]
 ignore_missing_imports = true
-module = [
-  "homie.*",
-  "pyaarlo.*",
-]
 
 [build-system]
 build-backend = "poetry.core.masonry.api"

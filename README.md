@@ -2,8 +2,8 @@
 [![CI](https://github.com/jasonxh/arlo-mqtt/actions/workflows/ci.yaml/badge.svg?event=push)](https://github.com/jasonxh/arlo-mqtt/actions/workflows/ci.yaml)
 
 A simple bridge between Arlo and MQTT.
-Follows [Homie v3.0.1](https://homieiot.github.io/specification/spec-core-v3_0_1/) convention in exposing devices in MQTT.
-Based on the Arlo python module from [twrecked/pyaarlo](https://github.com/twrecked/pyaarlo) and Homie3 python module from [mjcumming/HomieV3](https://github.com/mjcumming/HomieV3).
+Follows [Homie v4.0.0](https://homieiot.github.io/specification/spec-core-v4_0_0/) convention in exposing devices in MQTT.
+Based on the Arlo python module from [twrecked/pyaarlo](https://github.com/twrecked/pyaarlo) and Homie4 python module from [mjcumming/Homie4](https://github.com/mjcumming/homie4).
 
 # Usage
 ```
