@@ -11,7 +11,7 @@ arlo-mqtt = "arlo_mqtt.cli:main"
 python = "^3.8"
 
 homie4 = "^0.4.0"
-pyaarlo = { git = "https://github.com/jasonxh/pyaarlo.git", rev = "37b343f" }
+pyaarlo = "^0.8.0.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
